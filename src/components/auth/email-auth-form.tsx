@@ -26,7 +26,6 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const [formState, setFormState] = useState<FormState>(INITIAL_STATE);
 
   const isSignUp = mode === "sign-up";
-  const title = isSignUp ? "创建 Viby 账号" : "登录 Viby";
   const buttonLabel = isSignUp ? "创建账号" : "登录";
   const helperCopy = isSignUp
     ? "完成注册后即可开始试用额度，先体验 Viby AI，再决定是否接入你自己的 Key。"
@@ -41,9 +40,8 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
     });
 
     const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
 
-    if (!trimmedEmail || !trimmedPassword) {
+    if (!trimmedEmail || !password) {
       setFormState({
         error: "请填写邮箱和密码。",
         success: null,
@@ -51,38 +49,45 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
       });
       return;
     }
+    try {
+      const supabase = createClient();
 
-    const supabase = createClient();
+      const { error } = isSignUp
+        ? await supabase.auth.signUp({
+            email: trimmedEmail,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/verify`,
+            },
+          })
+        : await supabase.auth.signInWithPassword({
+            email: trimmedEmail,
+            password,
+          });
 
-    const { error } = isSignUp
-      ? await supabase.auth.signUp({
-          email: trimmedEmail,
-          password: trimmedPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/verify`,
-          },
-        })
-      : await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password: trimmedPassword,
+      if (error) {
+        setFormState({
+          error: error.message,
+          success: null,
+          submitting: false,
         });
+        return;
+      }
 
-    if (error) {
       setFormState({
-        error: error.message,
+        error: null,
+        success: isSignUp
+          ? "验证邮件已发送，请前往邮箱完成验证后再进入 Viby。"
+          : "登录成功，现在可以继续使用 Viby。",
+        submitting: false,
+      });
+    } catch (error) {
+      setFormState({
+        error: error instanceof Error ? error.message : "提交失败，请稍后再试。",
         success: null,
         submitting: false,
       });
-      return;
     }
-
-    setFormState({
-      error: null,
-      success: isSignUp
-        ? "验证邮件已发送，请前往邮箱完成验证后再进入 Viby。"
-        : "登录成功，正在带你回到工作台。",
-      submitting: false,
-    });
   }
 
   return (
@@ -91,9 +96,6 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
         <p className="text-sm font-medium tracking-[0.2em] text-cyan-300">
           VIBY AUTH
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-white">
-          {title}
-        </h1>
         <p className="text-sm leading-6 text-slate-300">{helperCopy}</p>
       </div>
 

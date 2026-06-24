@@ -9,9 +9,9 @@ export default function SignUpPage() {
             <p className="text-sm font-medium tracking-[0.24em] text-cyan-300">
               START WITH TRIAL
             </p>
-            <h2 className="mt-4 text-4xl font-semibold leading-tight text-white md:text-6xl">
+            <h1 className="mt-4 text-4xl font-semibold leading-tight text-white md:text-6xl">
               创建 Viby 账号
-            </h2>
+            </h1>
             <p className="mt-6 text-lg leading-8 text-slate-300">
               先用 Viby Credit 跑通从想法到分镜、参考图和素材包的完整流程，再决定什么时候切到
               BYOK。
