@@ -32,6 +32,7 @@ create table public.projects (
 create table public.creative_briefs (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
+  unique (project_id),
   payload jsonb not null,
   created_at timestamptz not null default now()
 );
@@ -71,6 +72,12 @@ on public.projects
 for insert
 with check (auth.uid() = user_id);
 
+create policy "Users can update their own projects"
+on public.projects
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
 create policy "Users can read briefs for their own projects"
 on public.creative_briefs
 for select
@@ -86,6 +93,26 @@ using (
 create policy "Users can insert briefs for their own projects"
 on public.creative_briefs
 for insert
+with check (
+  exists (
+    select 1
+    from public.projects
+    where public.projects.id = creative_briefs.project_id
+      and public.projects.user_id = auth.uid()
+  )
+);
+
+create policy "Users can update briefs for their own projects"
+on public.creative_briefs
+for update
+using (
+  exists (
+    select 1
+    from public.projects
+    where public.projects.id = creative_briefs.project_id
+      and public.projects.user_id = auth.uid()
+  )
+)
 with check (
   exists (
     select 1
