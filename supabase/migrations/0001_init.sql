@@ -19,8 +19,27 @@ create table public.credit_ledger (
   created_at timestamptz not null default now()
 );
 
+create table public.projects (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  raw_input text not null,
+  entry_mode text not null check (entry_mode in ('idea', 'paragraph', 'script')),
+  current_state text not null default 'brief',
+  created_at timestamptz not null default now()
+);
+
+create table public.creative_briefs (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
 alter table public.profiles enable row level security;
 alter table public.credit_ledger enable row level security;
+alter table public.projects enable row level security;
+alter table public.creative_briefs enable row level security;
 
 create policy "Users can read their own profile"
 on public.profiles
@@ -41,3 +60,37 @@ create policy "Users can insert their own credit ledger rows"
 on public.credit_ledger
 for insert
 with check (auth.uid() = user_id);
+
+create policy "Users can read their own projects"
+on public.projects
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their own projects"
+on public.projects
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can read briefs for their own projects"
+on public.creative_briefs
+for select
+using (
+  exists (
+    select 1
+    from public.projects
+    where public.projects.id = creative_briefs.project_id
+      and public.projects.user_id = auth.uid()
+  )
+);
+
+create policy "Users can insert briefs for their own projects"
+on public.creative_briefs
+for insert
+with check (
+  exists (
+    select 1
+    from public.projects
+    where public.projects.id = creative_briefs.project_id
+      and public.projects.user_id = auth.uid()
+  )
+);
