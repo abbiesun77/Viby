@@ -21,3 +21,23 @@ create table public.credit_ledger (
 
 alter table public.profiles enable row level security;
 alter table public.credit_ledger enable row level security;
+
+create policy "Users can read their own profile"
+on public.profiles
+for select
+using (auth.uid() = id);
+
+create policy "Users can update their own profile"
+on public.profiles
+for update
+using (auth.uid() = id);
+
+create policy "Users can read their own credit ledger"
+on public.credit_ledger
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their own credit ledger rows"
+on public.credit_ledger
+for insert
+with check (auth.uid() = user_id);

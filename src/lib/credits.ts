@@ -7,11 +7,20 @@ export const COSTS = {
 } as const;
 
 export type CreditAction = keyof typeof COSTS;
+export type CreditBalance = { points: number };
+
+function createBalance(points: number): CreditBalance {
+  return { points: Math.max(0, points) };
+}
+
+function applyDebit(balance: CreditBalance, action: CreditAction): CreditBalance {
+  return createBalance(balance.points - COSTS[action]);
+}
 
 export function grantTrialCredits() {
-  return { points: 120 };
+  return createBalance(120);
 }
 
 export function debitCredits(currentPoints: number, action: CreditAction) {
-  return currentPoints - COSTS[action];
+  return applyDebit(createBalance(currentPoints), action).points;
 }

@@ -8,4 +8,8 @@ describe("credits", () => {
     expect(debitCredits(balance.points, "brief_generation")).toBe(115);
     expect(debitCredits(balance.points, "image_generation")).toBe(100);
   });
+
+  it("does not allow balances to go negative", () => {
+    expect(debitCredits(10, "image_generation")).toBe(0);
+  });
 });
