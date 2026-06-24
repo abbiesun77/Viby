@@ -9,6 +9,12 @@ describe("marketing landing page", () => {
     expect(
       screen.getByText(/少抽卡，更稳地做出想要的视频/i),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /免费试用/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /免费试用/i }),
+    ).toHaveAttribute("href", "/sign-up");
+    expect(screen.getByRole("link", { name: /登录/i })).toHaveAttribute(
+      "href",
+      "/sign-in",
+    );
   });
 });
