@@ -1,32 +1,58 @@
-import { CreditBalanceCard } from "../../../components/dashboard/credit-balance-card";
-import { ProjectCreateCard } from "../../../components/dashboard/project-create-card";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "../../../lib/supabase/server";
 
-export default function AppHomePage() {
+export default async function AppHomePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
+
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, title, workflow_state, updated_at")
+    .order("updated_at", { ascending: false });
+
+  if (!projects || projects.length === 0) {
+    redirect("/app/new");
+  }
+
+  const stateLabels: Record<string, string> = {
+    onboarding: "准备中",
+    script: "剧本",
+    scenes: "场景 & 分镜",
+    storyboard: "Storyboard",
+    done: "已完成",
+  };
+
   return (
-    <main className="min-h-screen bg-[#050816] text-white">
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        <header className="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-medium tracking-[0.24em] text-cyan-300">
-              VIBY WORKSPACE
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
-              欢迎来到 Viby
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              先整理故事、分场和参考素材，再去生成更稳定的视频。
-            </p>
-          </div>
-          <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
-            当前模式：Viby AI 试用
-          </div>
-        </header>
+    <>
+      <nav className="topnav">
+        <div className="tn-left">
+          <Link href="/" className="tn-logo">Viby</Link>
+          <span className="tn-sep">/</span>
+          <span className="tn-proj">我的项目</span>
+        </div>
+        <div className="tn-right">
+          <Link href="/app/settings" className="tn-btn">设置</Link>
+          <Link href="/app/new" className="tn-btn solid">+ 新建项目</Link>
+        </div>
+      </nav>
 
-        <section className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <CreditBalanceCard points={120} />
-          <ProjectCreateCard />
-        </section>
+      <div className="plist-head">
+        <p className="kicker" style={{ marginBottom: 0 }}>项目列表</p>
       </div>
-    </main>
+      <div className="plist-grid">
+        {projects.map((p) => (
+          <Link key={p.id} href={`/app/projects/${p.id}`} className="pcard">
+            <div className="pcard-t">{p.title}</div>
+            <div className="pcard-m">
+              当前进度：{stateLabels[p.workflow_state] ?? p.workflow_state}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }

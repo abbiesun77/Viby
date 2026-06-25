@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "../../lib/supabase/browser";
 
@@ -20,16 +21,17 @@ const INITIAL_STATE: FormState = {
   submitting: false,
 };
 
+const SUPABASE_DISABLED_MESSAGE =
+  "本地还没有配置 Supabase，所以这里只展示界面，不会真的发送注册或登录请求。";
+
 export function EmailAuthForm({ mode }: EmailAuthFormProps) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formState, setFormState] = useState<FormState>(INITIAL_STATE);
 
   const isSignUp = mode === "sign-up";
   const buttonLabel = isSignUp ? "创建账号" : "登录";
-  const helperCopy = isSignUp
-    ? "完成注册后即可开始试用额度，先体验 Viby AI，再决定是否接入你自己的 Key。"
-    : "继续你的项目，查看剩余 Viby Credit，或在试用结束后切换到自己的 Key。";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,6 +49,22 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
         success: null,
         submitting: false,
       });
+      return;
+    }
+
+    const supabaseMissing =
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (supabaseMissing && process.env.NODE_ENV !== "test") {
+      setFormState({
+        error: null,
+        success: `${SUPABASE_DISABLED_MESSAGE} 正在带你进入演示工作台。`,
+        submitting: false,
+      });
+      window.setTimeout(() => {
+        router.push("/app");
+      }, 500);
       return;
     }
     try {
@@ -81,6 +99,12 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
           : "登录成功，现在可以继续使用 Viby。",
         submitting: false,
       });
+
+      if (!isSignUp && process.env.NODE_ENV !== "test") {
+        window.setTimeout(() => {
+          router.push("/app");
+        }, 500);
+      }
     } catch (error) {
       setFormState({
         error: error instanceof Error ? error.message : "提交失败，请稍后再试。",
@@ -91,16 +115,9 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   }
 
   return (
-    <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-cyan-950/30 backdrop-blur">
-      <div className="space-y-3">
-        <p className="text-sm font-medium tracking-[0.2em] text-cyan-300">
-          VIBY AUTH
-        </p>
-        <p className="text-sm leading-6 text-slate-300">{helperCopy}</p>
-      </div>
-
-      <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-        <label className="block text-sm font-medium text-slate-100">
+    <div className="auth-form-inner">
+      <form onSubmit={handleSubmit}>
+        <label className="auth-field">
           邮箱
           <input
             type="email"
@@ -108,12 +125,11 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
             placeholder="you@example.com"
           />
         </label>
 
-        <label className="block text-sm font-medium text-slate-100">
+        <label className="auth-field">
           密码
           <input
             type="password"
@@ -121,39 +137,27 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
             autoComplete={isSignUp ? "new-password" : "current-password"}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
-            placeholder={isSignUp ? "至少 6 位密码" : "输入你的密码"}
+            placeholder={isSignUp ? "至少 8 位" : "输入你的密码"}
           />
         </label>
 
-        <button
-          type="submit"
-          disabled={formState.submitting}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-[#050816] disabled:cursor-not-allowed disabled:bg-cyan-200"
-        >
-          {formState.submitting ? "提交中..." : buttonLabel}
+        <button type="submit" disabled={formState.submitting} className="btn-submit">
+          {formState.submitting ? "提交中…" : buttonLabel}
         </button>
       </form>
 
       {(formState.error || formState.success) && (
-        <p
-          className={`mt-4 text-sm leading-6 ${
-            formState.error ? "text-rose-300" : "text-emerald-300"
-          }`}
-        >
+        <p className={`auth-msg ${formState.error ? "err" : "ok"}`}>
           {formState.error ?? formState.success}
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
-        <span>{isSignUp ? "已经有账号？" : "第一次来？"}</span>
-        <Link
-          href={isSignUp ? "/sign-in" : "/sign-up"}
-          className="font-medium text-cyan-300 transition hover:text-cyan-200"
-        >
-          {isSignUp ? "去登录" : "创建新账号"}
+      <p className="form-alt">
+        {isSignUp ? "已有账号？" : "没有账号？"}
+        <Link href={isSignUp ? "/sign-in" : "/sign-up"}>
+          {isSignUp ? " 登录 →" : " 免费注册 →"}
         </Link>
-      </div>
+      </p>
     </div>
   );
 }

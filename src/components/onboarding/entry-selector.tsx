@@ -1,0 +1,139 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChatGuide } from "./chat-guide";
+
+type EntryMode = "idea" | "script";
+
+export function EntrySelector() {
+  const router = useRouter();
+  const [mode, setMode] = useState<EntryMode | null>(null);
+  const [idea, setIdea] = useState("");
+  const [script, setScript] = useState("");
+  const [title, setTitle] = useState("");
+  const [started, setStarted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentInput = mode === "idea" ? idea : script;
+  const canStart = !!mode && !!currentInput.trim();
+
+  // Idea path → guided chat (collects style/duration/mood, then creates project).
+  if (started && mode === "idea") {
+    return (
+      <ChatGuide idea={idea.trim()} title={title.trim() || idea.trim().slice(0, 20)} />
+    );
+  }
+
+  async function start() {
+    if (mode === "idea") {
+      setStarted(true);
+      return;
+    }
+    // Script path → create project directly, jump to scenes.
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entryMode: "script",
+          title: title.trim() || script.trim().slice(0, 20),
+          rawInput: script.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "创建项目失败");
+      }
+      const data = await res.json();
+      router.push(`/app/projects/${data.projectId}/scenes`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "创建项目失败");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="entry-wrap">
+      <h1 className="entry-q">你现在手上有什么？</h1>
+      <p className="entry-qs">选择你的起点，Viby 会用对应的方式帮你往下走。</p>
+
+      <div className="entry-cards">
+        <button
+          type="button"
+          className={`entry-card${mode === "idea" ? " selected" : ""}`}
+          onClick={() => setMode("idea")}
+          aria-pressed={mode === "idea"}
+        >
+          <span className="entry-check" />
+          <svg className="entry-card-ico" viewBox="0 0 24 24">
+            <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z" />
+          </svg>
+          <div className="entry-card-t">我有一个想法</div>
+          <div className="entry-card-d">
+            一句话或故事梗概都可以，系统会通过几个问题帮你生成完整剧本。
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className={`entry-card${mode === "script" ? " selected" : ""}`}
+          onClick={() => setMode("script")}
+          aria-pressed={mode === "script"}
+        >
+          <span className="entry-check" />
+          <svg className="entry-card-ico" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6M8 13h8M8 17h8M8 9h2" />
+          </svg>
+          <div className="entry-card-t">我已有完整剧本</div>
+          <div className="entry-card-d">
+            系统将直接解析你的剧本内容，不会再重新生成剧本。
+          </div>
+        </button>
+      </div>
+
+      {mode === "idea" && (
+        <textarea
+          className="entry-textarea"
+          value={idea}
+          onChange={(e) => setIdea(e.target.value)}
+          placeholder="输入你的想法或故事梗概…例如：一个失业宇航员在便利店遇见了未来的自己"
+        />
+      )}
+      {mode === "script" && (
+        <>
+          <textarea
+            className="entry-textarea"
+            style={{ minHeight: 200 }}
+            value={script}
+            onChange={(e) => setScript(e.target.value)}
+            placeholder="粘贴你的完整剧本…"
+          />
+          <div className="entry-warn">
+            <span>⚠</span>
+            <span>选择此入口后系统不会再生成剧本，将直接进入场景解析。</span>
+          </div>
+        </>
+      )}
+
+      {error && (
+        <p style={{ color: "var(--err)", fontSize: 13, marginBottom: 16 }}>{error}</p>
+      )}
+
+      <div className="entry-start-row">
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={!canStart || submitting}
+          onClick={start}
+        >
+          {submitting ? "创建中…" : "开始"}
+        </button>
+      </div>
+    </div>
+  );
+}

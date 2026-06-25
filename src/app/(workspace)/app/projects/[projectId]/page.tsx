@@ -1,116 +1,123 @@
-type ProjectPageProps = {
-  params: {
-    projectId: string;
-  };
+import Link from "next/link";
+import { loadProject } from "../../../../../lib/db/projects";
+import { AssetManager, type DashAsset } from "../../../../../components/workspace/asset-manager";
+
+const STATE_RANK: Record<string, number> = {
+  onboarding: 0,
+  script: 1,
+  scenes: 2,
+  storyboard: 3,
+  done: 4,
 };
 
-const sampleScenes = [
-  {
-    id: "scene_1",
-    title: "便利店夜班的异常重逢",
-    summary: "先把角色状态和便利店氛围立住，再进入真正的冲突。",
-  },
-  {
-    id: "scene_2",
-    title: "来自未来的任务交接",
-    summary: "用更明确的任务和倒计时，把后续镜头推进力撑起来。",
-  },
-];
+const CHECK = (
+  <svg viewBox="0 0 24 24">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+const WARN = (
+  <svg viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
 
-export default function ProjectOverviewPage({ params }: ProjectPageProps) {
+export default async function ProjectDashboardPage({
+  params,
+}: {
+  params: { projectId: string };
+}) {
+  const { project, supabase } = await loadProject(params.projectId);
+  const reached = STATE_RANK[project.workflow_state] ?? 0;
+
+  const [{ count: sceneCount }, { count: shotCount }, { data: assets }, { count: boardCount }] =
+    await Promise.all([
+      supabase.from("scenes").select("id", { count: "exact", head: true }).eq("project_id", project.id),
+      supabase.from("shots").select("id", { count: "exact", head: true }).eq("project_id", project.id),
+      supabase
+        .from("assets")
+        .select("id, asset_type, name, description, image_url, status")
+        .eq("project_id", project.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("storyboards")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", project.id)
+        .not("image_url", "is", null),
+    ]);
+
+  const missing = (assets ?? []).filter((a) => a.status === "missing").length;
+  const subParts = [
+    project.style,
+    project.mood,
+    project.duration,
+    `${sceneCount ?? 0} 场景 / ${shotCount ?? 0} 分镜`,
+  ].filter(Boolean);
+
+  const rows = [
+    {
+      done: reached >= 1,
+      name: "剧本",
+      meta: reached >= 1 ? "已确认" : "未开始",
+      act: "重新编辑",
+      href: `/app/projects/${project.id}/script`,
+    },
+    {
+      done: reached >= 2,
+      name: "场景 & 分镜",
+      meta: reached >= 2 ? `${sceneCount ?? 0} 场景 · ${shotCount ?? 0} 分镜` : "未开始",
+      act: "重新编辑",
+      href: `/app/projects/${project.id}/scenes`,
+    },
+    {
+      done: missing === 0 && (assets ?? []).length > 0,
+      warn: missing > 0,
+      name: "资产",
+      meta: missing > 0 ? `${missing} 项待补充` : "全部就绪",
+      act: "管理资产",
+      href: `#asset-col`,
+    },
+    {
+      done: (boardCount ?? 0) > 0,
+      name: "Storyboard",
+      meta: (boardCount ?? 0) > 0 ? `${boardCount} 张已生成` : "未生成",
+      act: "查看/重新生成",
+      href: `/app/projects/${project.id}/storyboard`,
+    },
+  ];
+
   return (
-    <main className="min-h-screen bg-[#050816] text-white">
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        <header className="border-b border-white/10 pb-6">
-          <p className="text-sm font-medium tracking-[0.24em] text-cyan-300">
-            PROJECT OVERVIEW
-          </p>
-          <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight">
-                便利店宇航员
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                先稳定角色、场景和叙事目标，再往镜头清单和参考素材继续推进。
-              </p>
-            </div>
-            <div className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">
-              项目 ID：{params.projectId}
-            </div>
-          </div>
-        </header>
-
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-lg border border-white/10 bg-white/5 p-6">
-            <h2 className="text-xl font-semibold">创作简报</h2>
-            <dl className="mt-5 grid gap-4 sm:grid-cols-3">
-              <div>
-                <dt className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  类型
-                </dt>
-                <dd className="mt-2 text-sm text-slate-100">科幻剧情</dd>
+    <main className="main-scroll">
+      <div className="dash-head">
+        <h1 className="dash-title">{project.title}</h1>
+        <p className="dash-sub">{subParts.join(" · ")}</p>
+      </div>
+      <div className="dash-grid">
+        <div>
+          <p className="kicker">项目进度</p>
+          <div className="prog-list">
+            {rows.map((r) => (
+              <div className="prog-row" key={r.name}>
+                <div className={`prog-ico ${r.done ? "done" : r.warn ? "warn" : ""}`}>
+                  {r.done ? CHECK : r.warn ? WARN : "🔲"}
+                </div>
+                <div className="prog-info">
+                  <div className="prog-name">{r.name}</div>
+                  <div className={`prog-meta ${r.warn ? "warn" : ""}`}>{r.meta}</div>
+                </div>
+                <Link className="prog-act" href={r.href}>
+                  {r.act}
+                </Link>
               </div>
-              <div>
-                <dt className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  气质
-                </dt>
-                <dd className="mt-2 text-sm text-slate-100">
-                  克制、轻微荒诞、电影感
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  当前阶段
-                </dt>
-                <dd className="mt-2 text-sm text-slate-100">简报已生成</dd>
-              </div>
-            </dl>
-            <p className="mt-5 rounded-lg border border-white/10 bg-[#0b1228] p-4 text-sm leading-6 text-slate-200">
-              目标：先稳定角色和便利店场景，再展开镜头。
-            </p>
-          </div>
-
-          <aside className="rounded-lg border border-white/10 bg-white/5 p-6">
-            <h2 className="text-xl font-semibold">下一步建议</h2>
-            <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-200">
-              <li>1. 生成分场，把叙事节奏先定下来。</li>
-              <li>2. 标出缺失素材，避免后面反复补图。</li>
-              <li>3. 进入镜头清单前先确认角色和场景定调。</li>
-            </ul>
-          </aside>
-        </section>
-
-        <section className="mt-8 rounded-lg border border-white/10 bg-white/5 p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold">分场基础</h2>
-              <p className="mt-2 text-sm text-slate-300">
-                这是场景生成的最小落点，后续可以接镜头清单和素材检查。
-              </p>
-            </div>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200">
-              {sampleScenes.length} 个场景
-            </span>
-          </div>
-          <div className="mt-5 grid gap-4">
-            {sampleScenes.map((scene, index) => (
-              <article
-                key={scene.id}
-                className="rounded-lg border border-white/10 bg-[#0b1228] p-4"
-              >
-                <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">
-                  场景 {index + 1}
-                </p>
-                <h3 className="mt-2 text-lg font-medium text-white">
-                  {scene.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  {scene.summary}
-                </p>
-              </article>
             ))}
           </div>
-        </section>
+          <Link href={`/app/projects/${project.id}/export`} className="export-cta">
+            导出素材包
+          </Link>
+        </div>
+
+        <AssetManager projectId={project.id} assets={(assets ?? []) as DashAsset[]} />
       </div>
     </main>
   );

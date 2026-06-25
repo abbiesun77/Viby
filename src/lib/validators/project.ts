@@ -1,9 +1,12 @@
 import { z } from "zod";
 
 export const createProjectSchema = z.object({
-  entryMode: z.enum(["idea", "paragraph", "script"]),
+  entryMode: z.enum(["idea", "script"]),
   title: z.string().trim().min(1, "请输入项目标题"),
   rawInput: z.string().trim().min(1, "请输入项目内容"),
+  style: z.string().trim().optional(),
+  duration: z.string().trim().optional(),
+  mood: z.string().trim().optional(),
 });
 
 export const projectRouteParamsSchema = z.object({

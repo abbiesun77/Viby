@@ -1,8 +1,11 @@
 export const COSTS = {
   brief_generation: 5,
+  script_generation: 5,
   scene_generation: 10,
   shot_generation: 10,
+  asset_generation: 20,
   image_generation: 20,
+  storyboard_generation: 20,
   repair_generation: 8,
 } as const;
 

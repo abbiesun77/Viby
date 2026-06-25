@@ -1,29 +1,68 @@
 import { NextResponse } from "next/server";
-import { projectRouteParamsSchema } from "../../../../../lib/validators/project";
+import { createClient } from "../../../../../lib/supabase/server";
+import { generateScenesForProject } from "../../../../../lib/db/scene-service";
 
+// GET: scenes + nested shots for a project.
+export async function GET(
+  _request: Request,
+  { params }: { params: { projectId: string } }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
+  const { data: scenes } = await supabase
+    .from("scenes")
+    .select("id, scene_number, title")
+    .eq("project_id", params.projectId)
+    .order("scene_number", { ascending: true });
+
+  const { data: shots } = await supabase
+    .from("shots")
+    .select("id, scene_id, shot_number, framing, subject, action, mood")
+    .eq("project_id", params.projectId)
+    .order("shot_number", { ascending: true });
+
+  return NextResponse.json({ scenes: scenes ?? [], shots: shots ?? [] });
+}
+
+// POST: regenerate scenes from the current script.
 export async function POST(
   _request: Request,
-  context: { params: { projectId: string } },
+  { params }: { params: { projectId: string } }
 ) {
-  const { projectId } = projectRouteParamsSchema.parse(context.params);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-  return NextResponse.json({
-    scenes: [
+  const { data: script } = await supabase
+    .from("scripts")
+    .select("content")
+    .eq("project_id", params.projectId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (!script) return NextResponse.json({ error: "尚无剧本" }, { status: 400 });
+
+  try {
+    await generateScenesForProject(supabase, user.id, params.projectId, script.content);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "场景生成失败";
+    const status = message === "INSUFFICIENT_CREDITS" ? 402 : 500;
+    return NextResponse.json(
       {
-        id: "scene_1",
-        projectId,
-        title: "便利店夜班的异常重逢",
-        summary: "主角在凌晨便利店值夜班时，遇见穿着旧宇航服的未来自己。",
-        status: "draft",
+        error:
+          status === 402
+            ? "Credit 不足，请在设置中切换到自己的 API Key。"
+            : message,
       },
-      {
-        id: "scene_2",
-        projectId,
-        title: "来自未来的任务交接",
-        summary: "未来的自己留下一个必须在天亮前完成的选择题。",
-        status: "draft",
-      },
-    ],
-    nextStep: "继续细化镜头清单",
-  });
+      { status }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
 }
