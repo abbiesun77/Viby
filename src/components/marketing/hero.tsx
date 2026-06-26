@@ -31,7 +31,7 @@ export function Hero() {
       </p>
       <div className="hero-actions">
         <Link href="/sign-up" className="btn-primary">
-          免费试用 — 注册即得 Credit
+          免费试用，注册即得 Credit
         </Link>
         <Link href="#workflow" className="btn-text">
           了解工作流 →
@@ -39,7 +39,7 @@ export function Hero() {
       </div>
       <div className="hero-stats">
         <div className="stat">
-          <div className="stat-n">3</div>
+          <div className="stat-n">2</div>
           <div className="stat-l">种创作入口</div>
         </div>
         <div className="stat">

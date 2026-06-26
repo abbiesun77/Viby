@@ -64,7 +64,7 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
       });
       window.setTimeout(() => {
         router.push("/app");
-      }, 500);
+      }, 700);
       return;
     }
     try {
@@ -103,7 +103,7 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
       if (!isSignUp && process.env.NODE_ENV !== "test") {
         window.setTimeout(() => {
           router.push("/app");
-        }, 500);
+        }, 700);
       }
     } catch (error) {
       setFormState({

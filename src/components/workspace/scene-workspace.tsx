@@ -34,6 +34,7 @@ export function SceneWorkspace({
   initialShots,
   initialAssets,
   onOpenAsset,
+  onUploadAsset,
   assetStatus,
 }: {
   projectId: string;
@@ -41,6 +42,7 @@ export function SceneWorkspace({
   initialShots: Shot[];
   initialAssets: Asset[];
   onOpenAsset?: (assetId: string) => void;
+  onUploadAsset?: (assetId: string, file: File) => Promise<void>;
   assetStatus?: Record<string, "missing" | "done" | "skipped">;
 }) {
   const router = useRouter();
@@ -48,6 +50,7 @@ export function SceneWorkspace({
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const status = assetStatus ?? {};
   // Capture the initial missing set once so补充后仍显示「✓ 已补充」而非消失。
@@ -102,18 +105,22 @@ export function SceneWorkspace({
             <div className="gap-title">
               以下参考图缺失，建议在生成 Storyboard 前补充：
             </div>
+            <div className="gap-subtitle">
+              有自己的实拍图、达人照片或空间参考？直接上传即可。也可以让 AI 生成。
+            </div>
             {visibleGaps.map((a) => {
               const st = status[a.id] ?? (skipped.has(a.id) ? "skipped" : "missing");
               const done = st === "done";
               const skip = st === "skipped";
-              const label =
+              const genLabel =
                 a.asset_type === "character"
-                  ? "生成三视图"
+                  ? "AI 生成三视图"
                   : a.asset_type === "scene"
-                    ? "生成空间图"
+                    ? "AI 生成空间图"
                     : a.asset_type === "prop"
-                      ? "生成道具图"
-                      : "生成风格图";
+                      ? "AI 生成道具图"
+                      : "AI 生成风格图";
+              const isUploading = uploadingId === a.id;
               return (
                 <div key={a.id} className={`gap-row${done || skip ? " done" : ""}`}>
                   <span
@@ -126,9 +133,36 @@ export function SceneWorkspace({
                     <span className="gap-done-tag">已跳过</span>
                   ) : (
                     <span className="gap-actions">
-                      <button className="gap-btn" onClick={() => onOpenAsset?.(a.id)}>
-                        {label}
+                      <button
+                        className="gap-btn solid"
+                        disabled={isUploading}
+                        onClick={() => onOpenAsset?.(a.id)}
+                      >
+                        {genLabel}
                       </button>
+                      <label
+                        className={`gap-btn${isUploading ? " disabled" : ""}`}
+                        style={{ cursor: isUploading ? "wait" : "pointer" }}
+                      >
+                        {isUploading ? "上传中…" : "上传参考图"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          disabled={isUploading}
+                          onChange={async (e) => {
+                            const f = e.target.files?.[0];
+                            if (!f || !onUploadAsset) return;
+                            setUploadingId(a.id);
+                            try {
+                              await onUploadAsset(a.id, f);
+                            } finally {
+                              setUploadingId(null);
+                              e.target.value = "";
+                            }
+                          }}
+                        />
+                      </label>
                       <button
                         className="gap-btn skip"
                         onClick={() => setSkipped((s) => new Set(s).add(a.id))}
@@ -312,13 +346,13 @@ function ShotRow({
       ) : (
         <div className="shot-fields">
           <span className="shot-k">景别</span>
-          <span className="shot-v">{shot.framing || "—"}</span>
+          <span className="shot-v">{shot.framing || "-"}</span>
           <span className="shot-k">主体</span>
-          <span className="shot-v">{shot.subject || "—"}</span>
+          <span className="shot-v">{shot.subject || "-"}</span>
           <span className="shot-k">动作</span>
-          <span className="shot-v">{shot.action || "—"}</span>
+          <span className="shot-v">{shot.action || "-"}</span>
           <span className="shot-k">氛围</span>
-          <span className="shot-v">{shot.mood || "—"}</span>
+          <span className="shot-v">{shot.mood || "-"}</span>
         </div>
       )}
     </div>

@@ -146,8 +146,8 @@ export function AssetPanel({
           )}
           {!imageUrl && (
             <div className="dp-actions" style={{ display: "flex" }}>
-              <label className="btn-s" style={{ cursor: "pointer" }}>
-                上传替换
+              <label className="btn-s solid" style={{ cursor: "pointer" }}>
+                上传参考图
                 <input
                   type="file"
                   accept="image/*"
@@ -158,6 +158,9 @@ export function AssetPanel({
                   }}
                 />
               </label>
+              <span style={{ fontSize: 12, color: "var(--muted)", alignSelf: "center" }}>
+                或填写描述后用 AI 生成
+              </span>
             </div>
           )}
         </div>

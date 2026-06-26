@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { loadProject } from "../../../../../lib/db/projects";
-import { AssetManager, type DashAsset } from "../../../../../components/workspace/asset-manager";
+import { AssetOverview, type DashAsset } from "../../../../../components/workspace/asset-pages";
 
 const STATE_RANK: Record<string, number> = {
   onboarding: 0,
@@ -76,7 +76,7 @@ export default async function ProjectDashboardPage({
       name: "资产",
       meta: missing > 0 ? `${missing} 项待补充` : "全部就绪",
       act: "管理资产",
-      href: `#asset-col`,
+      href: `/app/projects/${project.id}/assets`,
     },
     {
       done: (boardCount ?? 0) > 0,
@@ -117,7 +117,7 @@ export default async function ProjectDashboardPage({
           </Link>
         </div>
 
-        <AssetManager projectId={project.id} assets={(assets ?? []) as DashAsset[]} />
+        <AssetOverview projectId={project.id} assets={(assets ?? []) as DashAsset[]} />
       </div>
     </main>
   );

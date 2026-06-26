@@ -24,7 +24,7 @@ export function TrialSection() {
         </div>
         <div className="trial-cta-row">
           <Link href="/sign-up" className="btn-accent">免费注册</Link>
-          <Link href="/sign-in" className="btn-ghost">已有账号 — 登录</Link>
+          <Link href="/sign-in" className="btn-ghost">已有账号，登录</Link>
         </div>
       </div>
     </section>

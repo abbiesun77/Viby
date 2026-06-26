@@ -51,7 +51,7 @@
 /* HERO */
 .viby-light .hero {
   min-height: 100svh;
-  padding: 130px clamp(24px, 5vw, 80px) 80px;
+  padding: 96px clamp(24px, 5vw, 80px) 80px;
   display: flex; flex-direction: column; justify-content: center;
   border-bottom: 1px solid var(--border);
   max-width: 1440px; margin: 0 auto;

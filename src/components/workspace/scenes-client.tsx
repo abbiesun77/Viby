@@ -28,6 +28,25 @@ export function ScenesClient({
 
   const openAsset = assetList.find((a) => a.id === openAssetId) ?? null;
 
+  async function uploadAsset(assetId: string, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(
+      `/api/projects/${projectId}/assets/${assetId}/upload`,
+      { method: "POST", body: form }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "上传失败");
+    setStatusMap((m) => ({ ...m, [assetId]: "done" }));
+    setAssetList((list) =>
+      list.map((a) =>
+        a.id === assetId
+          ? { ...a, status: "uploaded" }
+          : a
+      )
+    );
+  }
+
   return (
     <>
       <SceneWorkspace
@@ -37,6 +56,7 @@ export function ScenesClient({
         initialAssets={assetList}
         assetStatus={statusMap}
         onOpenAsset={(id) => setOpenAssetId(id)}
+        onUploadAsset={uploadAsset}
       />
 
       {openAsset && (

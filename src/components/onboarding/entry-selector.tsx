@@ -5,33 +5,29 @@ import { useRouter } from "next/navigation";
 import { ChatGuide } from "./chat-guide";
 
 type EntryMode = "idea" | "script";
+type Phase = "select" | "idea-flow" | "script-input";
 
 export function EntrySelector() {
   const router = useRouter();
-  const [mode, setMode] = useState<EntryMode | null>(null);
-  const [idea, setIdea] = useState("");
+  const [phase, setPhase] = useState<Phase>("select");
   const [script, setScript] = useState("");
   const [title, setTitle] = useState("");
-  const [started, setStarted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const currentInput = mode === "idea" ? idea : script;
-  const canStart = !!mode && !!currentInput.trim();
-
-  // Idea path → guided chat (collects style/duration/mood, then creates project).
-  if (started && mode === "idea") {
-    return (
-      <ChatGuide idea={idea.trim()} title={title.trim() || idea.trim().slice(0, 20)} />
-    );
+  // Idea path: clicking the card jumps straight into the guided form.
+  // The first step of the guide IS the idea input, so we don't ask for
+  // the idea here anymore — no double-entry.
+  function chooseIdea() {
+    setPhase("idea-flow");
   }
 
-  async function start() {
-    if (mode === "idea") {
-      setStarted(true);
-      return;
-    }
-    // Script path → create project directly, jump to scenes.
+  // Script path: show the script textarea here, then create project.
+  function chooseScript() {
+    setPhase("script-input");
+  }
+
+  async function submitScript() {
     setSubmitting(true);
     setError(null);
     try {
@@ -56,6 +52,64 @@ export function EntrySelector() {
     }
   }
 
+  // ── Phase: guided idea flow ──
+  if (phase === "idea-flow") {
+    return <ChatGuide title="" />;
+  }
+
+  // ── Phase: script input ──
+  if (phase === "script-input") {
+    return (
+      <div className="entry-wrap">
+        <h1 className="entry-q">粘贴你的完整剧本</h1>
+        <p className="entry-qs">系统将直接解析剧本内容，不会再重新生成。</p>
+
+        <input
+          className="entry-title-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="项目标题（可选，留空则取剧本前 20 字）"
+        />
+        <textarea
+          className="entry-textarea"
+          style={{ minHeight: 240 }}
+          value={script}
+          onChange={(e) => setScript(e.target.value)}
+          placeholder="粘贴你的完整剧本…"
+          autoFocus
+        />
+        <div className="entry-warn">
+          <span>⚠</span>
+          <span>选择此入口后系统不会再生成剧本，将直接进入场景解析。</span>
+        </div>
+
+        {error && (
+          <p style={{ color: "var(--err)", fontSize: 13, marginBottom: 16 }}>{error}</p>
+        )}
+
+        <div className="entry-start-row">
+          <button
+            type="button"
+            className="btn-g"
+            onClick={() => setPhase("select")}
+            disabled={submitting}
+          >
+            ← 返回选择
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!script.trim() || submitting}
+            onClick={submitScript}
+          >
+            {submitting ? "创建中…" : "开始解析 →"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase: entry selection (default) ──
   return (
     <div className="entry-wrap">
       <h1 className="entry-q">你现在手上有什么？</h1>
@@ -64,9 +118,8 @@ export function EntrySelector() {
       <div className="entry-cards">
         <button
           type="button"
-          className={`entry-card${mode === "idea" ? " selected" : ""}`}
-          onClick={() => setMode("idea")}
-          aria-pressed={mode === "idea"}
+          className="entry-card"
+          onClick={chooseIdea}
         >
           <span className="entry-check" />
           <svg className="entry-card-ico" viewBox="0 0 24 24">
@@ -76,13 +129,13 @@ export function EntrySelector() {
           <div className="entry-card-d">
             一句话或故事梗概都可以，系统会通过几个问题帮你生成完整剧本。
           </div>
+          <div className="entry-card-cta">开始 →</div>
         </button>
 
         <button
           type="button"
-          className={`entry-card${mode === "script" ? " selected" : ""}`}
-          onClick={() => setMode("script")}
-          aria-pressed={mode === "script"}
+          className="entry-card"
+          onClick={chooseScript}
         >
           <span className="entry-check" />
           <svg className="entry-card-ico" viewBox="0 0 24 24">
@@ -93,45 +146,7 @@ export function EntrySelector() {
           <div className="entry-card-d">
             系统将直接解析你的剧本内容，不会再重新生成剧本。
           </div>
-        </button>
-      </div>
-
-      {mode === "idea" && (
-        <textarea
-          className="entry-textarea"
-          value={idea}
-          onChange={(e) => setIdea(e.target.value)}
-          placeholder="输入你的想法或故事梗概…例如：一个失业宇航员在便利店遇见了未来的自己"
-        />
-      )}
-      {mode === "script" && (
-        <>
-          <textarea
-            className="entry-textarea"
-            style={{ minHeight: 200 }}
-            value={script}
-            onChange={(e) => setScript(e.target.value)}
-            placeholder="粘贴你的完整剧本…"
-          />
-          <div className="entry-warn">
-            <span>⚠</span>
-            <span>选择此入口后系统不会再生成剧本，将直接进入场景解析。</span>
-          </div>
-        </>
-      )}
-
-      {error && (
-        <p style={{ color: "var(--err)", fontSize: 13, marginBottom: 16 }}>{error}</p>
-      )}
-
-      <div className="entry-start-row">
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={!canStart || submitting}
-          onClick={start}
-        >
-          {submitting ? "创建中…" : "开始"}
+          <div className="entry-card-cta">粘贴剧本 →</div>
         </button>
       </div>
     </div>

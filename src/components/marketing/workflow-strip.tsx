@@ -8,8 +8,7 @@ const steps = [
 export function WorkflowStrip() {
   return (
     <section className="sec" id="workflow">
-      <p className="sec-kicker" data-reveal>工作流</p>
-      <h2 className="sec-head" data-reveal data-d="1">从想法到可投喂的素材包</h2>
+      <h2 className="sec-head" data-reveal>从想法到可投喂的素材包</h2>
       <div className="wf-grid">
         {steps.map((s, i) => (
           <div key={s.n} className="wf-step" data-reveal data-d={i > 0 ? String(i) : undefined}>
