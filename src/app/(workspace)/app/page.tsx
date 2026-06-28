@@ -1,22 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "../../../lib/supabase/server";
-
-const stateLabels: Record<string, string> = {
-  onboarding: "准备中",
-  script: "剧本",
-  scenes: "场景 & 分镜",
-  storyboard: "Storyboard",
-  done: "已完成",
-};
-
-const stateProgress: Record<string, number> = {
-  onboarding: 0,
-  script: 25,
-  scenes: 50,
-  storyboard: 75,
-  done: 100,
-};
+import { ProjectCardActions } from "../../../components/workspace/project-card";
 
 export default async function AppHomePage() {
   const configured = isSupabaseConfigured();
@@ -77,7 +62,7 @@ export default async function AppHomePage() {
       <div className="plist-grid">
         {configured && projects && projects.length > 0 ? (
           projects.map((p) => (
-            <ProjectCard key={p.id} project={p} />
+            <ProjectCardActions key={p.id} project={p} />
           ))
         ) : (
           // Demo mode: show the demo project as a single card.
@@ -100,30 +85,5 @@ export default async function AppHomePage() {
         )}
       </div>
     </>
-  );
-}
-
-function ProjectCard({ project }: { project: any }) {
-  const state = project.workflow_state ?? "onboarding";
-  const progress = stateProgress[state] ?? 0;
-  const meta = [project.style, project.duration, project.mood].filter(Boolean).join(" · ");
-
-  return (
-    <Link href={`/app/projects/${project.id}`} className="pcard">
-      <div className="pcard-thumb-wrap">
-        <div className="pcard-thumb" data-state={state} />
-        <span className="pcard-state-pill">{stateLabels[state] ?? state}</span>
-      </div>
-      <div className="pcard-body">
-        <div className="pcard-t">{project.title}</div>
-        {meta && <div className="pcard-meta">{meta}</div>}
-        <div className="pcard-progress">
-          <div className="pcard-progress-bar">
-            <div className="pcard-progress-fill" style={{ width: `${progress}%` }} />
-          </div>
-          <span className="pcard-progress-label">{progress}%</span>
-        </div>
-      </div>
-    </Link>
   );
 }

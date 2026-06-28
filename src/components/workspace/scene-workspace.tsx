@@ -198,10 +198,16 @@ export function SceneWorkspace({
             onClick={confirmScenes}
             disabled={confirming || initialScenes.length === 0}
           >
-            {confirming ? "处理中…" : "确认场景，生成 Storyboard →"}
+            {confirming ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 14, height: 14, border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+                处理中…
+              </span>
+            ) : "确认场景，生成 Storyboard →"}
           </button>
         </div>
       </div>
+      <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
     </>
   );
 }
@@ -279,8 +285,10 @@ function ShotRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(shot);
+  const [savingShot, setSavingShot] = useState(false);
 
   async function save() {
+    setSavingShot(true);
     await fetch(`/api/projects/${projectId}/shots/${shot.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -293,6 +301,7 @@ function ShotRow({
     });
     onChange(draft);
     setEditing(false);
+    setSavingShot(false);
   }
 
   return (
@@ -338,8 +347,10 @@ function ShotRow({
             <button className="btn-s" onClick={() => { setDraft(shot); setEditing(false); }}>
               取消
             </button>
-            <button className="btn-s solid" onClick={save}>
-              保存
+            <button className="btn-s solid" onClick={save} disabled={savingShot}>
+              {savingShot ? (
+                <span style={{ width: 12, height: 12, border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+              ) : "保存"}
             </button>
           </div>
         </div>

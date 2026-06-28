@@ -12,10 +12,10 @@ export interface AssetPanelData {
 }
 
 const PROMPTS: Record<string, string> = {
-  character: "描述一下这个角色的外貌，越具体越好。",
-  scene: "描述这个场景的空间、光线和氛围。",
-  prop: "描述这个道具的外形、材质和细节。",
-  style: "描述你想要的整体色调和画面质感。",
+  character: "描述角色外貌：发型、肤色、五官特征、服装风格，越具体越好。",
+  scene: "描述空旷的空间本身：房间陈设、光线方向、材质、色温，不要写人物。",
+  prop: "描述道具的外形、材质、颜色和细节。",
+  style: "描述整片的色彩基调：暖调/冷调、饱和度高低、胶片感/数码感、光线质感。例如：暖橙低饱和、自然光、轻微胶片颗粒感。",
 };
 
 export function AssetPanel({
@@ -106,11 +106,16 @@ export function AssetPanel({
 
           <div className="dp-label">预览</div>
           <div className={`dp-frame${imageUrl ? " done" : ""}${busy ? " gen" : ""}`}>
-            {imageUrl ? (
+            {busy ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, height: "100%" }}>
+                <span style={{ width: 16, height: 16, border: "2px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+                <span style={{ fontSize: 13, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>生成中…</span>
+              </div>
+            ) : imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt={asset.name} />
             ) : (
-              <span className="dp-hint">{busy ? "生成中…" : "生成后显示在这里"}</span>
+              <span className="dp-hint">生成后显示在这里</span>
             )}
           </div>
 
@@ -165,6 +170,7 @@ export function AssetPanel({
           )}
         </div>
       </aside>
+      <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
     </>
   );
 }

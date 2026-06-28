@@ -213,6 +213,17 @@ export function AssetManagerFull({
                 {items.filter((a) => a.status === "generated" || a.status === "uploaded").length}
                 /{items.length} 就绪
               </span>
+              {/* Character reference hint: first ready asset anchors the rest */}
+              {g.type === "character" && items.some((a) => a.status === "generated" || a.status === "uploaded") && (
+                <span style={{ fontSize: 11, color: "var(--ok)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>
+                  ✓ 参考图已就绪，后续角色将自动参考
+                </span>
+              )}
+              {g.type === "character" && !items.some((a) => a.status === "generated" || a.status === "uploaded") && (
+                <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>
+                  建议先生成 {items[0]?.name ?? "C01"} 作为角色基准
+                </span>
+              )}
             </div>
             <div className="amf-grid">
               {items.map((a) => {
@@ -221,7 +232,11 @@ export function AssetManagerFull({
                 return (
                   <div className={`amf-card${r ? "" : " missing"}`} key={a.id}>
                     <div className="amf-card-thumb">
-                      {r && a.image_url ? (
+                      {isUploading ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                          <span style={{ width: 18, height: 18, border: "2px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+                        </div>
+                      ) : r && a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={a.image_url} alt={a.name} />
                       ) : (
@@ -303,6 +318,7 @@ export function AssetManagerFull({
           }
         />
       )}
+      <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

@@ -13,6 +13,8 @@
  * return a friendly error in demo mode.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 const DEMO_USER = {
   id: "demo-user-0000-0000-0000-000000000000",
   email: "demo@viby.local",
@@ -70,7 +72,12 @@ function makeChain() {
 }
 
 export function createMockServerClient() {
-  return {
+  // Demo-mode runtime stub. We assert it to the real SupabaseClient type so
+  // callers (which receive `realClient | mockClient`) keep precise query
+  // result types instead of collapsing to `unknown` on the union. The shape
+  // below only implements what the app actually calls; the cast is the
+  // single, intentional seam where that partial impl meets the full type.
+  const client = {
     auth: {
       getUser: async () => ({ data: { user: DEMO_USER }, error: null }),
       getSession: async () => ({
@@ -96,4 +103,5 @@ export function createMockServerClient() {
     }),
     removeChannel: () => {},
   };
+  return client as unknown as SupabaseClient;
 }

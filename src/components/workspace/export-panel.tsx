@@ -121,9 +121,15 @@ export function ExportPanel({
           取消
         </a>
         <button className="btn-p" onClick={download} disabled={busy}>
-          {busy ? "打包中…" : "下载 ZIP"}
+          {busy ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 14, height: 14, border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+              打包中…
+            </span>
+          ) : "下载 ZIP"}
         </button>
       </div>
+      <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
     </>
   );
 }

@@ -102,9 +102,15 @@ export function EntrySelector() {
             disabled={!script.trim() || submitting}
             onClick={submitScript}
           >
-            {submitting ? "创建中…" : "开始解析 →"}
+            {submitting ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 14, height: 14, border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+                创建中…
+              </span>
+            ) : "开始解析 →"}
           </button>
         </div>
+        <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );
   }

@@ -8,25 +8,31 @@ interface Block {
   body: string;
 }
 
-// Parse "== 场景 N：标题 ==" markers into display blocks.
+// Split "== 场景 N：标题 ==" markers into display blocks. The marker may appear
+// at the start of a line or inline within the text (LLM output varies), so we
+// split on the marker pattern globally rather than requiring its own line.
 function parseBlocks(text: string): Block[] {
-  const lines = text.split("\n");
+  const markerRe = /==\s*([^=\n]+?)\s*==/g;
   const blocks: Block[] = [];
-  let current: Block | null = null;
-  const headRe = /^==\s*(.+?)\s*==$/;
+  let lastIndex = 0;
+  let lastHead: string | null = null;
+  let match: RegExpExecArray | null;
 
-  for (const line of lines) {
-    const m = line.match(headRe);
-    if (m) {
-      if (current) blocks.push(current);
-      current = { head: m[1], body: "" };
-    } else {
-      if (!current) current = { head: null, body: "" };
-      current.body += (current.body ? "\n" : "") + line;
+  while ((match = markerRe.exec(text)) !== null) {
+    const body = text.slice(lastIndex, match.index).trim();
+    if (lastHead !== null || body) {
+      blocks.push({ head: lastHead, body });
     }
+    lastHead = match[1].trim();
+    lastIndex = markerRe.lastIndex;
   }
-  if (current) blocks.push(current);
-  if (blocks.length === 0) blocks.push({ head: null, body: text });
+  // trailing body after the last marker
+  const tail = text.slice(lastIndex).trim();
+  if (lastHead !== null || tail) {
+    blocks.push({ head: lastHead, body: tail });
+  }
+
+  if (blocks.length === 0) blocks.push({ head: null, body: text.trim() });
   return blocks;
 }
 
@@ -144,7 +150,12 @@ export function ScriptEditor({
             </span>
           )}
           <button className="btn-p" onClick={confirmScript} disabled={confirming}>
-            {confirming ? "生成场景中…" : "确认剧本，进入场景 →"}
+            {confirming ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 14, height: 14, border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+                生成场景中…
+              </span>
+            ) : "确认剧本，进入场景 →"}
           </button>
         </div>
       </div>
@@ -199,6 +210,7 @@ function ScriptChatPanel({
   }
 
   return (
+    <>
     <aside className="script-aside">
       <div className="aside-title">和 AI 一起调整剧本</div>
       <div className="aside-sub">描述你想改动的地方，Viby 会帮你重写对应段落。</div>
@@ -219,9 +231,13 @@ function ScriptChatPanel({
           placeholder="你希望改动什么？"
         />
         <button className="ai-send" onClick={send} disabled={busy}>
-          发送
+          {busy ? (
+            <span style={{ width: 14, height: 14, border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+          ) : "发送"}
         </button>
       </div>
     </aside>
+    <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
+    </>
   );
 }

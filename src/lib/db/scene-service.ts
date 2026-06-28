@@ -40,7 +40,12 @@ export async function generateScenesForProject(
   const aiConfig = await resolveAiConfig(supabase, userId);
   await debitForAction(supabase, userId, "scene_generation", aiConfig.mode);
 
-  const sceneText = await generateText(buildScenePrompt(scriptContent), aiConfig);
+  // Load duration for shot-count constraints
+  const { data: project } = await supabase
+    .from("projects").select("duration")
+    .eq("id", projectId).single();
+
+  const sceneText = await generateText(buildScenePrompt(scriptContent, project?.duration), aiConfig);
   const { scenes } = parseJsonFromText<{ scenes: SceneShape[] }>(sceneText);
 
   // Clear existing scenes (cascade removes shots) for a clean regenerate.

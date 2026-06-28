@@ -83,7 +83,12 @@ export function StoryboardWorkspace({
             </button>
           </div>
           <button className="btn-p" style={{ marginTop: 8 }} onClick={genAll} disabled={generatingAll || items.length === 0}>
-            {generatingAll ? "生成中…" : "生成全部场景的 Storyboard"}
+            {generatingAll ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 14, height: 14, border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+                生成中…
+              </span>
+            ) : "生成全部场景的 Storyboard"}
           </button>
         </div>
 
@@ -111,6 +116,7 @@ export function StoryboardWorkspace({
           前往导出 →
         </button>
       </div>
+      <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
     </>
   );
 }
@@ -143,11 +149,9 @@ function BoardScene({
       <div className="board-rule" />
       <div className={`board-frame${vertical ? " vertical" : ""}`}>
         {busy ? (
-          <div className="board-progress">
-            <span className="bp-label">生成中…</span>
-            <div className="bp-bar">
-              <div className="bp-fill" style={{ width: "60%" }} />
-            </div>
+          <div className="board-progress" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <span style={{ width: 16, height: 16, border: "2px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", display: "inline-block", animation: "viby-spin 0.6s linear infinite" }} />
+            <span style={{ fontSize: 13, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>生成中…</span>
           </div>
         ) : scene.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element

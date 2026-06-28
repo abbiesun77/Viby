@@ -4,7 +4,7 @@ import { createClient } from "../../../lib/supabase/server";
 import { createProjectSchema } from "../../../lib/validators/project";
 import { resolveAiConfig, debitForAction } from "../../../lib/ai/config";
 import { generateText } from "../../../lib/ai/client";
-import { buildScriptPrompt } from "../../../lib/ai/prompts";
+import { buildScriptPrompt, buildTitlePrompt } from "../../../lib/ai/prompts";
 
 export async function POST(request: Request) {
   let body;
@@ -36,40 +36,57 @@ export async function POST(request: Request) {
     .insert({
       user_id: user.id,
       title: body.title,
+      raw_input: body.rawInput,
       entry_mode: body.entryMode,
       workflow_state: workflowState,
       style: body.style ?? null,
       duration: body.duration ?? null,
       mood: body.mood ?? null,
+      content_type: body.contentType ?? null,
+      visual_feel: body.visualFeel ?? null,
     })
     .select("id, entry_mode, title, workflow_state")
     .single();
 
   if (projectError || !project) {
-    return NextResponse.json({ error: "创建项目失败" }, { status: 500 });
+    console.error("[projects] insert failed:", projectError);
+    return NextResponse.json(
+      { error: "创建项目失败", detail: projectError?.message },
+      { status: 500 }
+    );
   }
 
   let scriptContent = body.rawInput;
   let newBalance: number | undefined;
+  let aiTitle: string | undefined;
 
   if (isIdea) {
     try {
       const aiConfig = await resolveAiConfig(supabase, user.id);
-      newBalance = await debitForAction(
-        supabase,
-        user.id,
-        "script_generation",
-        aiConfig.mode
-      );
-      scriptContent = await generateText(
-        buildScriptPrompt(
-          body.rawInput,
-          body.style ?? "电影感",
-          body.duration ?? "30秒",
-          body.mood ?? "克制"
+      newBalance = await debitForAction(supabase, user.id, "script_generation", aiConfig.mode);
+
+      // Generate title + script in parallel
+      [aiTitle, scriptContent] = await Promise.all([
+        generateText(
+          buildTitlePrompt(body.rawInput, body.contentType, body.mood),
+          aiConfig
+        ).then((t) => t.trim().replace(/["""''《》【】]/g, "").slice(0, 20)),
+        generateText(
+          buildScriptPrompt(
+            body.rawInput,
+            body.style ?? "电影感",
+            body.duration ?? "30秒",
+            body.mood ?? "克制",
+            body.contentType,
+            body.visualFeel
+          ),
+          aiConfig
         ),
-        aiConfig
-      );
+      ]);
+      // Update project title with AI-generated one if we got one
+      if (aiTitle) {
+        await supabase.from("projects").update({ title: aiTitle }).eq("id", project.id);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "剧本生成失败";
       if (message === "INSUFFICIENT_CREDITS") {

@@ -6,15 +6,15 @@ import { SettingsForm } from "../../../../components/workspace/settings-form";
 export default async function SettingsPage() {
   const configured = isSupabaseConfigured();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (configured && !user) redirect("/sign-in");
 
   const { data: profile } = configured
     ? await supabase
         .from("profiles")
-        .select("viby_credit_balance, active_ai_mode, byok_base_url")
+        .select(
+          "viby_credit_balance, active_ai_mode, byok_base_url, byok_text_model, byok_image_base_url, byok_image_api_key, byok_image_model"
+        )
         .eq("id", user.id)
         .single()
     : { data: null };
@@ -44,7 +44,16 @@ export default async function SettingsPage() {
 
           <SettingsForm
             initialMode={profile?.active_ai_mode === "byok" ? "byok" : "viby_ai"}
-            initialBaseUrl={profile?.byok_base_url ?? ""}
+            initialText={{
+              baseUrl: profile?.byok_base_url ?? "",
+              apiKey: "",
+              model: profile?.byok_text_model ?? "",
+            }}
+            initialImage={{
+              baseUrl: profile?.byok_image_base_url ?? "",
+              apiKey: "",
+              model: profile?.byok_image_model ?? "",
+            }}
             creditBalance={balance}
           />
         </div>

@@ -74,9 +74,6 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
         ? await supabase.auth.signUp({
             email: trimmedEmail,
             password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/verify`,
-            },
           })
         : await supabase.auth.signInWithPassword({
             email: trimmedEmail,
@@ -95,12 +92,12 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
       setFormState({
         error: null,
         success: isSignUp
-          ? "验证邮件已发送，请前往邮箱完成验证后再进入 Viby。"
+          ? "注册成功，正在进入 Viby…"
           : "登录成功，现在可以继续使用 Viby。",
         submitting: false,
       });
 
-      if (!isSignUp && process.env.NODE_ENV !== "test") {
+      if (process.env.NODE_ENV !== "test") {
         window.setTimeout(() => {
           router.push("/app");
         }, 700);
@@ -142,7 +139,19 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
         </label>
 
         <button type="submit" disabled={formState.submitting} className="btn-submit">
-          {formState.submitting ? "提交中…" : buttonLabel}
+          {formState.submitting ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <span style={{
+                width: 14, height: 14,
+                border: "1.5px solid rgba(255,255,255,0.3)",
+                borderTopColor: "#fff",
+                borderRadius: "50%",
+                display: "inline-block",
+                animation: "viby-spin 0.6s linear infinite",
+              }} />
+              {buttonLabel}中…
+            </span>
+          ) : buttonLabel}
         </button>
       </form>
 
@@ -158,6 +167,8 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
           {isSignUp ? " 登录 →" : " 免费注册 →"}
         </Link>
       </p>
+
+      <style>{`@keyframes viby-spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

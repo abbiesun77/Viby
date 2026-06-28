@@ -7,6 +7,8 @@ export const createProjectSchema = z.object({
   style: z.string().trim().optional(),
   duration: z.string().trim().optional(),
   mood: z.string().trim().optional(),
+  contentType: z.string().trim().optional(),
+  visualFeel: z.string().trim().optional(),
 });
 
 export const projectRouteParamsSchema = z.object({

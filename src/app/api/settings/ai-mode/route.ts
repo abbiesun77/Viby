@@ -2,59 +2,41 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "../../../../lib/supabase/server";
 
-const aiModeSchema = z
-  .object({
-    mode: z.enum(["viby_ai", "byok"]),
-    byokBaseUrl: z.string().trim().optional(),
-    byokApiKey: z.string().trim().optional(),
-  })
-  .superRefine((value, context) => {
-    if (value.mode === "byok") {
-      if (!value.byokBaseUrl) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["byokBaseUrl"],
-          message: "请填写你的 Base URL",
-        });
-      }
-
-      if (!value.byokApiKey) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["byokApiKey"],
-          message: "请填写你的 API Key",
-        });
-      }
-    }
-  });
+const schema = z.object({
+  mode: z.enum(["viby_ai", "byok"]),
+  // Text provider
+  byokBaseUrl: z.string().trim().optional(),
+  byokApiKey: z.string().trim().optional(),
+  byokTextModel: z.string().trim().optional(),
+  // Image provider (optional; falls back to text if absent)
+  byokImageBaseUrl: z.string().trim().optional(),
+  byokImageApiKey: z.string().trim().optional(),
+  byokImageModel: z.string().trim().optional(),
+}).superRefine((v, ctx) => {
+  if (v.mode === "byok") {
+    if (!v.byokBaseUrl) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["byokBaseUrl"], message: "请填写文本 AI 的 Base URL" });
+    if (!v.byokApiKey) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["byokApiKey"], message: "请填写文本 AI 的 API Key" });
+  }
+});
 
 export async function POST(request: Request) {
-  const body = aiModeSchema.parse(await request.json());
+  const body = schema.parse(await request.json());
 
-  // Persist to the profile when a user session is available.
-  // Falls back to a stateless echo (used by unit tests without auth).
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase
-        .from("profiles")
-        .update({
-          active_ai_mode: body.mode,
-          byok_base_url: body.byokBaseUrl ?? null,
-          byok_api_key_encrypted: body.byokApiKey ?? null,
-        })
-        .eq("id", user.id);
+      await supabase.from("profiles").update({
+        active_ai_mode: body.mode,
+        byok_base_url: body.byokBaseUrl ?? null,
+        byok_api_key_encrypted: body.byokApiKey ?? null,
+        byok_text_model: body.byokTextModel || null,
+        byok_image_base_url: body.byokImageBaseUrl || null,
+        byok_image_api_key: body.byokImageApiKey || null,
+        byok_image_model: body.byokImageModel || null,
+      }).eq("id", user.id);
     }
-  } catch {
-    // No Supabase env (e.g. unit test) — skip persistence.
-  }
+  } catch { /* no Supabase env */ }
 
-  return NextResponse.json({
-    mode: body.mode,
-    byokBaseUrl: body.byokBaseUrl ?? "",
-    byokApiKey: body.byokApiKey ? "••••••••" : "",
-  });
+  return NextResponse.json({ mode: body.mode });
 }
